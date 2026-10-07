@@ -22,6 +22,8 @@
 <a name="english"></a>
 # PiClock - E-Paper Digital Clock for Raspberry Pi Zero 2 W
 
+[![Architecture diagram](https://gitdiagram.com/diagram-badge.svg)](https://gitdiagram.com/jona-walpert/piclock?utm_source=readme&utm_medium=badge)
+
 A modern, highly efficient E-Paper digital clock designed for Raspberry Pi Zero 2 W and Waveshare 2.13-inch E-Paper displays (V4, V3, V2).
 
 ## Key Features
@@ -103,6 +105,8 @@ python3 test_clock.py --mock
 <a name="deutsch"></a>
 # PiClock - E-Paper Digitaluhr (Deutsche Dokumentation)
 
+[![Architecture diagram](https://gitdiagram.com/diagram-badge.svg)](https://gitdiagram.com/jona-walpert/piclock?utm_source=readme&utm_medium=badge)
+
 Eine moderne, energieeffiziente E-Paper-Digitaluhr für den Raspberry Pi Zero 2 W und Waveshare 2.13 Zoll E-Paper Displays (V4, V3, V2).
 
 ## Kernfunktionen
@@ -119,3 +123,4 @@ Eine moderne, energieeffiziente E-Paper-Digitaluhr für den Raspberry Pi Zero 2 
 ## Lizenz
 MIT License (c) 2026 Jona Walpert - siehe [LICENSE](LICENSE).
 Alle Quelltexte sind 100% KI-generiert.
+

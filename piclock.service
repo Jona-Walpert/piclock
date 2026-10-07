@@ -1,0 +1,22 @@
+[Unit]
+Description=PiClock E-Paper Digital Clock
+After=network.target time-sync.target
+Wants=time-sync.target
+
+[Service]
+Type=simple
+User=pi
+Group=pi
+WorkingDirectory=/home/pi/piclock
+ExecStart=/usr/bin/python3 /home/pi/piclock/main.py
+Restart=always
+RestartSec=5
+Environment=PYTHONUNBUFFERED=1
+
+# Resource limits & hygiene
+KillMode=mixed
+TimeoutStopSec=10
+
+[Install]
+WantedBy=multi-user.target
+

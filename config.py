@@ -70,6 +70,14 @@ NTP_SYNC_INTERVAL_HOURS = int(os.getenv("PICLOCK_NTP_INTERVAL", "1"))
 NTP_ENABLED = True
 NTP_SERVERS = ["pool.ntp.org", "0.debian.pool.ntp.org", "time.google.com"]
 
+# Power Saving & Battery Optimization (for Raspberry Pi Zero 2 W)
+# Optimizes peripherals: HDMI off, ACT LED off, WiFi power-save, CPU governor
+ENABLE_POWER_SAVING = os.getenv("PICLOCK_POWER_SAVING", "true").lower() in ("true", "1", "yes")
+DISABLE_HDMI = True
+DISABLE_ACT_LED = True
+WIFI_POWER_SAVE = True
+CPU_POWERSAVE_GOVERNOR = True
+
 # Logging
 LOG_LEVEL = os.getenv("PICLOCK_LOG_LEVEL", "INFO")
 

@@ -13,6 +13,7 @@ import config
 from display import DisplayManager
 from time_sync import TimeSynchronizer
 from power import PowerManager
+from notify import get_pending_notification
 
 # Configure logging
 logging.basicConfig(
@@ -59,24 +60,26 @@ def main():
         time_sync.start()
 
     try:
-        # 1. STRICT SYNCHRONIZATION ON STARTUP:
-        # Never refresh the screen immediately in the middle of a minute.
-        # Wait until the upcoming :00 second mark before performing the initial render.
-        now = datetime.now(tz)
-        if now.second != 0 or now.microsecond > 100_000:
-            seconds_to_first_minute = 60.0 - now.second - (now.microsecond / 1_000_000.0)
-            target_min = (now.minute + 1) % 60
-            target_hour = now.hour if now.minute < 59 else (now.hour + 1) % 24
-            logger.info(
-                "PiClock started at %02d:%02d:%02d. Aligning to next minute mark (waiting %.2fs until %02d:%02d:00)...",
-                now.hour, now.minute, now.second, seconds_to_first_minute, target_hour, target_min
-            )
-            if shutdown_event.wait(timeout=seconds_to_first_minute):
-                return
+        # 1. BOOT SPLASH SCREEN
+        # Immediately display fullscreen 'PiClock' splash screen so user knows system is up
+        logger.info("Displaying fullscreen boot splash screen...")
+        splash_img = display_mgr.create_splash_image("PiClock", "System starting...")
+        display_mgr.partial_refresh(splash_img)
 
-        # First render happens precisely at the 00-second mark of the new minute
+        # Wait a minimum of 4 seconds or until the upcoming :00 mark
         now = datetime.now(tz)
-        logger.info("First display render at exact minute mark %02d:%02d:00", now.hour, now.minute)
+        seconds_to_first_minute = 60.0 - now.second - (now.microsecond / 1_000_000.0)
+        if seconds_to_first_minute < 4.0:
+            seconds_to_first_minute += 60.0
+
+        logger.info("Splash screen active. Aligning to next minute mark (%.1fs)...", seconds_to_first_minute)
+        # Sleep until minute mark while still checking for shutdown
+        if shutdown_event.wait(timeout=seconds_to_first_minute):
+            return
+
+        # First regular clock render precisely at :00.00
+        now = datetime.now(tz)
+        logger.info("First clock display render at exact minute mark %02d:%02d:00", now.hour, now.minute)
         initial_img = display_mgr.create_clock_image(now, is_synced=time_sync.is_synced)
         display_mgr.full_refresh_with_cleaning(initial_img)
 
@@ -91,22 +94,44 @@ def main():
             if seconds_remaining <= 0.05:
                 seconds_remaining += 60.0
 
-            logger.debug("Sleeping %.2f seconds until next minute tick...", seconds_remaining)
-            if shutdown_event.wait(timeout=seconds_remaining):
+            # Sleep in small increments to check for live on-screen notifications
+            end_sleep_time = time.monotonic() + seconds_remaining
+            while time.monotonic() < end_sleep_time and not shutdown_event.is_set():
+                # Check for live notifications (e.g. SSH login, update, network status)
+                notif = get_pending_notification()
+                if notif:
+                    logger.info("Displaying notification on screen: [%s] %s", notif['title'], notif['message'])
+                    notif_img = display_mgr.create_notification_image(
+                        notif['title'], notif['message'], notif.get('time_str')
+                    )
+                    display_mgr.partial_refresh(notif_img)
+                    # Hold notification for requested duration
+                    duration = min(notif.get('duration', 8), 20)
+                    shutdown_event.wait(timeout=duration)
+                    # Restore clock screen immediately after notification
+                    current_now = datetime.now(tz)
+                    restored_clock = display_mgr.create_clock_image(current_now, is_synced=time_sync.is_recently_synced())
+                    display_mgr.partial_refresh(restored_clock)
+
+                # Sleep chunk of 0.5s
+                chunk = min(0.5, end_sleep_time - time.monotonic())
+                if chunk > 0:
+                    shutdown_event.wait(timeout=chunk)
+
+            if shutdown_event.is_set():
                 break
 
-            # Woke up! Re-check time
+            # Woke up at minute boundary! Re-check time
             now = datetime.now(tz)
             current_minute = (now.hour, now.minute)
 
-            # SAFETY CHECK 1: Discard early wakeups within the same minute
+            # SAFETY CHECK 1: Discard duplicate/early wakeups
             if current_minute == last_rendered_minute:
                 time.sleep(0.05)
                 continue
 
             # SAFETY CHECK 2: STRICT MINUTE BOUNDARY CHECK
             # Only refresh if we are at the very beginning of the minute (second <= 2).
-            # If off-schedule (e.g. clock jumped or thread lagged), skip refresh to never update mid-minute!
             if now.second > 2:
                 logger.warning(
                     "Off-schedule wakeup at %02d:%02d:%02d. Skipping refresh to prevent mid-minute updates.",

@@ -44,7 +44,17 @@ def run_tests(use_mock: bool = False):
     banner_img = display_mgr.create_new_day_image(now)
     print(f" -> Rendered midnight new-day banner: {banner_img.size}, mode: {banner_img.mode}")
     assert banner_img.size == (config.DISPLAY_WIDTH, config.DISPLAY_HEIGHT)
-    print(" -> Layout, day banner, and text bounding calculations: SUCCESS")
+
+    # Test Boot Splash Screen
+    splash_img = display_mgr.create_splash_image("PiClock", "Starting up...")
+    print(f" -> Rendered boot splash screen: {splash_img.size}, mode: {splash_img.mode}")
+    assert splash_img.size == (config.DISPLAY_WIDTH, config.DISPLAY_HEIGHT)
+
+    # Test Live Notification Card
+    notif_img = display_mgr.create_notification_image("SSH Session", "User pi connected from 192.168.2.150", "22:45:00")
+    print(f" -> Rendered notification card: {notif_img.size}, mode: {notif_img.mode}")
+    assert notif_img.size == (config.DISPLAY_WIDTH, config.DISPLAY_HEIGHT)
+    print(" -> Layout, splash, notifications, and text bounding calculations: SUCCESS")
 
     # 3. Time Sync Test
     print("\n[3/5] Testing Time Synchronization...")

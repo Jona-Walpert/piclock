@@ -56,12 +56,16 @@ class DisplayManager:
             self.font_date = ImageFont.truetype(date_font_path, 17)
             self.font_status = ImageFont.truetype(date_font_path, 11)
             self.font_day_large = ImageFont.truetype(time_font_path, 36)
+            self.font_splash = ImageFont.truetype(time_font_path, 44)
+            self.font_msg = ImageFont.truetype(date_font_path, 16)
         else:
             logger.warning("No TrueType font found, using default bitmap font")
             self.font_time = ImageFont.load_default()
             self.font_date = ImageFont.load_default()
             self.font_status = ImageFont.load_default()
             self.font_day_large = ImageFont.load_default()
+            self.font_splash = ImageFont.load_default()
+            self.font_msg = ImageFont.load_default()
 
     def initialize_display(self):
         """Initialize the underlying hardware display."""
@@ -166,6 +170,74 @@ class DisplayManager:
         date_bbox = draw.textbbox((0, 0), date_str, font=self.font_date)
         date_w = date_bbox[2] - date_bbox[0]
         draw.text(((self.width - date_w) // 2, 88), date_str, font=self.font_date, fill=0)
+
+        if self.rotation == 180:
+            image = image.rotate(180)
+
+        return image
+
+    def create_splash_image(self, title: str = "PiClock", subtitle: str = "System starting...") -> Image.Image:
+        """Renders a stylish full-screen boot splash screen."""
+        image = Image.new("1", (self.width, self.height), 255)
+        draw = ImageDraw.Draw(image)
+
+        # Outer modern border
+        draw.rectangle([(3, 3), (self.width - 4, self.height - 4)], outline=0, width=2)
+        draw.rectangle([(6, 6), (self.width - 7, self.height - 7)], outline=0, width=1)
+
+        # Title: "PiClock"
+        title_bbox = draw.textbbox((0, 0), title, font=self.font_splash)
+        title_w = title_bbox[2] - title_bbox[0]
+        title_x = (self.width - title_w) // 2
+        draw.text((title_x, 16), title, font=self.font_splash, fill=0)
+
+        # Separator line with decorative diamond
+        draw.line([(30, 70), (self.width - 30, 70)], fill=0, width=1)
+
+        # Subtitle: e.g. "System starting..." or "E-Paper Digital Clock"
+        sub_bbox = draw.textbbox((0, 0), subtitle, font=self.font_date)
+        sub_w = sub_bbox[2] - sub_bbox[0]
+        sub_x = (self.width - sub_w) // 2
+        draw.text((sub_x, 82), subtitle, font=self.font_date, fill=0)
+
+        if self.rotation == 180:
+            image = image.rotate(180)
+
+        return image
+
+    def create_notification_image(self, title: str, message: str, timestamp_str: str = None) -> Image.Image:
+        """Renders a clean full-screen confirmation / notification card."""
+        image = Image.new("1", (self.width, self.height), 255)
+        draw = ImageDraw.Draw(image)
+
+        # Distinctive inverted header banner
+        draw.rectangle([(0, 0), (self.width, 32)], fill=0)
+
+        # Header Title in White on Black
+        header_text = f"★  {title.upper()}  ★"
+        h_bbox = draw.textbbox((0, 0), header_text, font=self.font_date)
+        h_w = h_bbox[2] - h_bbox[0]
+        draw.text(((self.width - h_w) // 2, 7), header_text, font=self.font_date, fill=255)
+
+        # Message Body (splits if contains newline or wraps)
+        lines = message.split("\n")
+        if len(lines) == 1 and len(message) > 26:
+            # Simple word-wrap
+            words = message.split()
+            mid = len(words) // 2
+            lines = [" ".join(words[:mid]), " ".join(words[mid:])]
+
+        start_y = 48 if len(lines) > 1 else 58
+        for i, line in enumerate(lines[:2]):
+            m_bbox = draw.textbbox((0, 0), line, font=self.font_msg)
+            m_w = m_bbox[2] - m_bbox[0]
+            draw.text(((self.width - m_w) // 2, start_y + (i * 22)), line, font=self.font_msg, fill=0)
+
+        # Bottom timestamp / status bar
+        if timestamp_str:
+            ts_bbox = draw.textbbox((0, 0), timestamp_str, font=self.font_status)
+            ts_w = ts_bbox[2] - ts_bbox[0]
+            draw.text(((self.width - ts_w) // 2, 100), timestamp_str, font=self.font_status, fill=0)
 
         if self.rotation == 180:
             image = image.rotate(180)

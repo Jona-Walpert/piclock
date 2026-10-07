@@ -65,10 +65,17 @@ if command -v timedatectl >/dev/null 2>&1; then
     echo " -> Current time: $(date)"
 fi
 
-# 4. Install Systemd Service
+# 4. Install Systemd Service & Hooks
 echo ""
-echo "[4/5] Installing and enabling systemd service ($SERVICE_NAME)..."
+echo "[4/5] Installing systemd service ($SERVICE_NAME) and SSH hooks..."
 cp "$INSTALL_DIR/$SERVICE_NAME" "/etc/systemd/system/$SERVICE_NAME"
+
+# Install SSH login notification hook
+if [ -f "$INSTALL_DIR/scripts/ssh_notify.sh" ]; then
+    cp "$INSTALL_DIR/scripts/ssh_notify.sh" /etc/ssh/sshrc
+    chmod +x /etc/ssh/sshrc
+    echo " -> Installed SSH notification hook (/etc/ssh/sshrc)."
+fi
 
 # Update WorkingDirectory and User in service file dynamically
 sed -i "s|^User=.*|User=$CURRENT_USER|" "/etc/systemd/system/$SERVICE_NAME"

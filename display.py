@@ -47,16 +47,21 @@ class DisplayManager:
             time_font_path = None
             date_font_path = None
 
+        self._time_font_path = time_font_path
+        self._date_font_path = date_font_path
+
         if time_font_path:
             logger.info("Using fonts from: %s", time_font_path)
             self.font_time = ImageFont.truetype(time_font_path, 64)
             self.font_date = ImageFont.truetype(date_font_path, 17)
             self.font_status = ImageFont.truetype(date_font_path, 11)
+            self.font_day_large = ImageFont.truetype(time_font_path, 36)
         else:
             logger.warning("No TrueType font found, using default bitmap font")
             self.font_time = ImageFont.load_default()
             self.font_date = ImageFont.load_default()
             self.font_status = ImageFont.load_default()
+            self.font_day_large = ImageFont.load_default()
 
     def initialize_display(self):
         """Initialize the underlying hardware display."""
@@ -111,6 +116,57 @@ class DisplayManager:
             draw.ellipse([(self.width - 12, 10), (self.width - 8, 14)], fill=0)
 
         # Apply rotation if configured
+        if self.rotation == 180:
+            image = image.rotate(180)
+
+        return image
+
+    def create_new_day_image(self, current_time: datetime) -> Image.Image:
+        """Renders a prominent new-day banner shown at midnight (00:00:00 to 00:00:29).
+
+        Displays the full weekday name in large typography across the screen.
+        """
+        image = Image.new("1", (self.width, self.height), 255)
+        draw = ImageDraw.Draw(image)
+
+        # 1. Header: "NEUER TAG"
+        header_str = "★ NEUER TAG ★"
+        header_bbox = draw.textbbox((0, 0), header_str, font=self.font_status)
+        header_w = header_bbox[2] - header_bbox[0]
+        draw.text(((self.width - header_w) // 2, 8), header_str, font=self.font_status, fill=0)
+
+        # Decorative line above weekday
+        draw.line([(25, 24), (self.width - 25, 24)], fill=0, width=1)
+
+        # 2. Large Weekday Name (e.g. "DONNERSTAG")
+        weekday_name = config.GERMAN_WEEKDAYS.get(current_time.weekday(), current_time.strftime("%A")).upper()
+
+        font = self.font_day_large
+        if self._time_font_path:
+            font_size = 36
+            bbox = draw.textbbox((0, 0), weekday_name, font=font)
+            while (bbox[2] - bbox[0]) > 225 and font_size > 20:
+                font_size -= 2
+                font = ImageFont.truetype(self._time_font_path, font_size)
+                bbox = draw.textbbox((0, 0), weekday_name, font=font)
+        else:
+            bbox = draw.textbbox((0, 0), weekday_name, font=font)
+
+        day_w = bbox[2] - bbox[0]
+        day_x = (self.width - day_w) // 2
+        day_y = 35
+        draw.text((day_x, day_y), weekday_name, font=font, fill=0)
+
+        # Decorative line below weekday
+        draw.line([(25, 78), (self.width - 25, 78)], fill=0, width=1)
+
+        # 3. Date Subtitle: "08. Okt 2026"
+        month_name = config.GERMAN_MONTHS.get(current_time.month, current_time.strftime("%b"))
+        date_str = f"{current_time.day:02d}. {month_name} {current_time.year}"
+        date_bbox = draw.textbbox((0, 0), date_str, font=self.font_date)
+        date_w = date_bbox[2] - date_bbox[0]
+        draw.text(((self.width - date_w) // 2, 88), date_str, font=self.font_date, fill=0)
+
         if self.rotation == 180:
             image = image.rotate(180)
 

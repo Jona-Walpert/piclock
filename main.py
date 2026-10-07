@@ -34,13 +34,11 @@ def signal_handler(signum, frame):
 
 def main():
     """Runs the main digital clock loop."""
-    logger.info("=========================================")
     logger.info("   Starting PiClock E-Paper Digital Clock")
     logger.info("   Driver: %s, Resolution: %dx%d", config.DISPLAY_DRIVER, config.DISPLAY_WIDTH, config.DISPLAY_HEIGHT)
     logger.info("   Full Refresh Interval: %d min", config.FULL_REFRESH_INTERVAL_MINUTES)
     logger.info("   Ghosting Cleaning Cycles: %d", config.CLEANING_CYCLES)
     logger.info("   Timezone: %s", config.TIMEZONE)
-    logger.info("=========================================")
 
     # Register OS signals
     signal.signal(signal.SIGINT, signal_handler)
@@ -90,6 +88,25 @@ def main():
             last_rendered_minute = current_minute
             elapsed_since_full = time.monotonic() - last_full_refresh_time
             needs_full_refresh = elapsed_since_full >= (config.FULL_REFRESH_INTERVAL_MINUTES * 60)
+
+            # Special midnight feature: Display new-day banner from 00:00:00 to 00:00:29
+            if current_minute == (0, 0):
+                logger.info("Midnight reached! Showing new day banner for 30s (%s)", now.strftime("%A"))
+                day_banner = display_mgr.create_new_day_image(now)
+                display_mgr.partial_refresh(day_banner)
+
+                # Wait until 00:00:30 mark
+                seconds_to_30 = 30.0 - now.second - (now.microsecond / 1_000_000.0)
+                if seconds_to_30 > 0.05:
+                    if shutdown_event.wait(timeout=seconds_to_30):
+                        break
+
+                # Switch back to standard clock display for 00:00:30 - 00:00:59
+                now = datetime.now(tz)
+                logger.info("Returning to standard clock display at 00:00:30")
+                clock_img = display_mgr.create_clock_image(now, is_synced=time_sync.is_recently_synced())
+                display_mgr.partial_refresh(clock_img)
+                continue
 
             # Render updated clock image
             clock_img = display_mgr.create_clock_image(now, is_synced=time_sync.is_recently_synced())

@@ -37,9 +37,14 @@ def run_tests(use_mock: bool = False):
     print("\n[2/5] Testing Image Generation & Typography...")
     now = datetime.now(ZoneInfo(config.TIMEZONE))
     test_img = display_mgr.create_clock_image(now, is_synced=True)
-    print(f" -> Rendered image dimensions: {test_img.size}, mode: {test_img.mode}")
+    print(f" -> Rendered clock image dimensions: {test_img.size}, mode: {test_img.mode}")
     assert test_img.size == (config.DISPLAY_WIDTH, config.DISPLAY_HEIGHT)
-    print(" -> Layout and text bounding calculations: SUCCESS")
+
+    # Test Midnight New Day Banner
+    banner_img = display_mgr.create_new_day_image(now)
+    print(f" -> Rendered midnight new-day banner: {banner_img.size}, mode: {banner_img.mode}")
+    assert banner_img.size == (config.DISPLAY_WIDTH, config.DISPLAY_HEIGHT)
+    print(" -> Layout, day banner, and text bounding calculations: SUCCESS")
 
     # 3. Time Sync Test
     print("\n[3/5] Testing Time Synchronization...")

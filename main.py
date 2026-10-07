@@ -12,6 +12,7 @@ from zoneinfo import ZoneInfo
 import config
 from display import DisplayManager
 from time_sync import TimeSynchronizer
+from power import PowerManager
 
 # Configure logging
 logging.basicConfig(
@@ -47,6 +48,9 @@ def main():
     tz = ZoneInfo(config.TIMEZONE)
 
     # Initialize modules
+    power_mgr = PowerManager()
+    power_mgr.apply_optimizations()
+
     time_sync = TimeSynchronizer()
     display_mgr = DisplayManager()
 

@@ -1,3 +1,15 @@
+# 🤖 100% AI GENERATED CODEBASE 🤖
+
+> # ⚠️ WICHTIGER HINWEIS / IMPORTANT NOTICE:
+> **DIESER GESAMTE CODE UND DIESES REPOSITORY WURDEN VOLLSTÄNDIG VON KÜNSTLICHER INTELLIGENZ (AI / GOOGLE ANTIGRAVITY) ERSTELLT.**
+> 
+> **ALL CODE IN THIS REPOSITORY IS 100% ARTIFICIAL INTELLIGENCE GENERATED.**
+> 
+> **HAFTUNGSAUSSCHLUSS (NO LIABILITY):**
+> Der Code wird ohne jegliche Gewährleistung oder Haftung zur Verfügung gestellt ("AS IS"). Der Autor übernimmt keinerlei Verantwortung für eventuelle Schäden, Hardwaredefekte oder Fehlfunktionen. Macht damit, was ihr wollt! (Siehe [MIT LICENSE](LICENSE)).
+
+---
+
 # PiClock - E-Paper Digitaluhr für Raspberry Pi Zero 2 W
 
 Moderne, energieeffiziente E-Paper-Digitaluhr für Raspberry Pi Zero 2 W und Waveshare 2.13 Zoll E-Paper Displays (V4, V3, V2).
@@ -21,6 +33,7 @@ piclock/
 ├── config.py               # Zentrale Konfiguration (Intervalle, Schriftarten, Formate)
 ├── piclock.service         # Systemd-Service Unit
 ├── test_clock.py           # Automatisierter Hardware- & Komponententest
+├── LICENSE                 # MIT License (Zero Liability)
 ├── drivers/
 │   ├── base.py             # Abstraktes Treiber-Interface
 │   ├── driver_waveshare.py # Waveshare 2.13" Adapter (V4, V3, V2)
@@ -54,3 +67,8 @@ sudo systemctl restart piclock.service
 sudo systemctl stop piclock.service
 ```
 
+---
+
+## Lizenz
+MIT License (c) 2026 Jona Walpert - siehe [LICENSE](LICENSE).
+Code ist 100% KI-generiert.

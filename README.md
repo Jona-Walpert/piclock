@@ -32,28 +32,95 @@ A modern, highly efficient E-Paper digital clock designed for Raspberry Pi Zero 
 * **Anti-Ghosting Deep Clean:** Configurable black/white inversion cycles every 30 to 60 minutes to eliminate e-paper particle ghosting.
 * **Precise Time Synchronization:** Background hourly synchronization with NTP time servers (`pool.ntp.org`) and `systemd-timesyncd`.
 * **Midnight New-Day Celebration (`feature/midnight-new-day`):** Prominently displays the new day name across the entire screen from 00:00:00 to 00:00:29, then switches back to the regular clock at 00:00:30.
+* **Power Optimization (`feature/power-saving`):** Software power-saving mode disabling HDMI circuitry and the onboard ACT LED, reducing current draw by over 60%.
 * **Autostart & Reliability:** Runs as a standalone background `systemd` service (`piclock.service`) with automatic recovery and restart on boot.
 * **Modular Driver Architecture:** Out-of-the-box support for Waveshare 2.13" V4, V3, and V2 panels, as well as a mock simulator driver for testing.
 
 ---
 
-## Project Structure
+## Hardware Wiring & Pinout
+Connect the Waveshare 2.13" E-Paper display module to the Raspberry Pi 40-pin GPIO header:
+
+| E-Paper Pin | Raspberry Pi Pin | GPIO Header Pin | Function |
+|---|---|---|---|
+| **VCC** | 3.3V Power | **Pin 1** (or Pin 17) | 3.3V Power Supply |
+| **GND** | Ground | **Pin 6** (or Pin 9, 14, 20) | Ground |
+| **DIN** | MOSI | **Pin 19** (GPIO 10) | SPI Data In |
+| **CLK** | SCLK | **Pin 23** (GPIO 11) | SPI Clock |
+| **CS** | CE0 | **Pin 24** (GPIO 8) | Chip Select (Active Low) |
+| **DC** | GPIO 25 | **Pin 22** (GPIO 25) | Data (High) / Command (Low) |
+| **RST** | GPIO 17 | **Pin 11** (GPIO 17) | Hardware Reset |
+| **BUSY**| GPIO 24 | **Pin 18** (GPIO 24) | Busy Signal Input |
+
+---
+
+## Installation & Setup Instructions
+
+### Option A: One-Step Automated Setup (Recommended)
+On your Raspberry Pi, clone the repository and run the automated installer:
+
+```bash
+git clone https://github.com/Jona-Walpert/piclock.git ~/piclock
+cd ~/piclock
+sudo ./install.sh
 ```
-piclock/
-├── main.py                 # Main loop (minute ticks, event scheduling, signal handling)
-├── display.py              # DisplayManager (layout engine, typography, refresh cycles)
-├── time_sync.py            # Background NTP and systemd-timesyncd synchronizer
-├── config.py               # Central configuration (intervals, fonts, timezones, rotation)
-├── piclock.service         # Systemd service unit for autostart
-├── test_clock.py           # Automated hardware & component self-test script
-├── LICENSE                 # MIT License (Zero liability, open usage)
-├── README.md               # Documentation
-├── drivers/
-│   ├── base.py             # Abstract display driver interface
-│   ├── driver_waveshare.py # Waveshare 2.13" adapter (V4, V3, V2)
-│   ├── mock.py             # Mock display simulator driver
-│   └── waveshare/          # Original Waveshare low-level hardware drivers & epdconfig
-└── fonts/                  # TrueType fonts (Roboto-Bold, Roboto-Regular)
+The installer automatically:
+1. Enables the SPI hardware interface and loads kernel modules.
+2. Installs required system packages (`python3-pil`, `python3-spidev`, `python3-rpi-lgpio`, fonts).
+3. Adds the user to necessary hardware groups (`spi`, `gpio`).
+4. Installs and enables the `piclock.service` systemd daemon.
+5. Starts the clock immediately in the background.
+
+---
+
+### Option B: Manual Step-by-Step Installation
+
+#### 1. Enable SPI Hardware Interface
+Run `raspi-config`:
+```bash
+sudo raspi-config nonint do_spi 0
+```
+*Or manually ensure `dtparam=spi=on` is present in `/boot/firmware/config.txt` (or `/boot/config.txt`).*
+
+#### 2. Install Required System Dependencies
+```bash
+sudo apt update
+sudo apt install -y python3-pil python3-spidev python3-rpi-lgpio fonts-dejavu-core
+```
+
+#### 3. Clone Repository
+```bash
+git clone https://github.com/Jona-Walpert/piclock.git ~/piclock
+cd ~/piclock
+```
+
+#### 4. Run Hardware Self-Test
+Verify that your display hardware and wiring work properly:
+```bash
+python3 test_clock.py
+```
+*(Use `python3 test_clock.py --mock` for simulation without hardware).*
+
+#### 5. Configure Autostart (systemd)
+```bash
+sudo cp piclock.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now piclock.service
+```
+
+---
+
+## Systemd Service Management
+```bash
+# Check service status
+sudo systemctl status piclock.service
+
+# View live log output
+journalctl -u piclock.service -f
+
+# Restart or stop the service
+sudo systemctl restart piclock.service
+sudo systemctl stop piclock.service
 ```
 
 ---
@@ -71,33 +138,29 @@ All parameters can be configured directly in `config.py` or overridden via envir
 | `CLEANING_CYCLES` | `2` | Number of black/white inversion flashes before full refresh |
 | `TIMEZONE` | `Europe/Berlin` | Clock timezone |
 | `NTP_SYNC_INTERVAL_HOURS` | `1` | Interval for background NTP time checks |
+| `ENABLE_POWER_SAVING` | `true` | Turns off HDMI and ACT LED to conserve power |
 
 ---
 
-## Systemd Service Management
-The clock is managed via `systemd`:
-```bash
-# Check service status
-sudo systemctl status piclock.service
-
-# View live log output
-journalctl -u piclock.service -f
-
-# Restart or stop the service
-sudo systemctl restart piclock.service
-sudo systemctl stop piclock.service
+## Project Structure
 ```
-
----
-
-## Hardware Self-Test
-You can run the built-in self-test directly on the Pi:
-```bash
-# Run test with physical display hardware
-python3 test_clock.py
-
-# Run test in simulation mode (offline / without hardware)
-python3 test_clock.py --mock
+piclock/
+├── main.py                 # Main loop (minute ticks, event scheduling, signal handling)
+├── display.py              # DisplayManager (layout engine, typography, refresh cycles)
+├── time_sync.py            # Background NTP and systemd-timesyncd synchronizer
+├── power.py                # Power management (HDMI off, LED off, CPU governor)
+├── config.py               # Central configuration (intervals, fonts, timezones, rotation)
+├── install.sh              # Automated 1-step installation script
+├── piclock.service         # Systemd service unit for autostart
+├── test_clock.py           # Automated hardware & component self-test script
+├── LICENSE                 # MIT License (Zero liability, open usage)
+├── README.md               # Documentation
+├── drivers/
+│   ├── base.py             # Abstract display driver interface
+│   ├── driver_waveshare.py # Waveshare 2.13" adapter (V4, V3, V2)
+│   ├── mock.py             # Mock display simulator driver
+│   └── waveshare/          # Low-level Waveshare hardware drivers & epdconfig
+└── fonts/                  # TrueType fonts (Roboto-Bold, Roboto-Regular)
 ```
 
 ---
@@ -115,8 +178,61 @@ Eine moderne, energieeffiziente E-Paper-Digitaluhr für den Raspberry Pi Zero 2 
 * **Anti-Ghosting Deep Clean:** Konfigurierbare Schwarz/Weiß-Invertierungszyklen alle 30 bis 60 Minuten zur vollständigen Beseitigung von Ghosting-Artefakten.
 * **Präzise Zeitsynchronisation:** Stündlicher Hintergrundabgleich mit NTP-Servern (`pool.ntp.org`) und `systemd-timesyncd`.
 * **Neuer-Tag-Anzeige um Mitternacht (`feature/midnight-new-day`):** Zeigt von 00:00:00 bis 00:00:29 groß den neuen Wochentag an und schaltet um 00:00:30 wieder auf die reguläre Uhrzeit zurück.
+* **Stromspar-Modus (`feature/power-saving`):** Deaktiviert HDMI und Status-LEDs (senkt den Stromverbrauch um über 60%).
 * **Autostart & Zuverlässigkeit:** Autarker Hintergrundbetrieb via `systemd` (`piclock.service`) mit automatischem Neustart.
-* **Modulare Treiberarchitektur:** Waveshare 2.13" V4, V3, V2 sowie Mock-Simulator für Offline-Tests.
+
+---
+
+## Hardware-Verkabelung (Pinbelegung)
+Verbinde das Waveshare 2.13" Display wie folgt mit der 40-Pin-GPIO-Leiste des Raspberry Pi:
+
+| Display-Pin | Pi Pin-Name | GPIO Pin-Nummer | Funktion |
+|---|---|---|---|
+| **VCC** | 3.3V | **Pin 1** (oder 17) | Stromversorgung 3.3V |
+| **GND** | Masse | **Pin 6** (oder 9, 14, 20) | Masse (Ground) |
+| **DIN** | MOSI | **Pin 19** (GPIO 10) | SPI Datenleitung |
+| **CLK** | SCLK | **Pin 23** (GPIO 11) | SPI Taktleitung |
+| **CS** | CE0 | **Pin 24** (GPIO 8) | Chip-Auswahl |
+| **DC** | GPIO 25 | **Pin 22** (GPIO 25) | Daten / Befehlsumschaltung |
+| **RST** | GPIO 17 | **Pin 11** (GPIO 17) | Reset-Pin |
+| **BUSY**| GPIO 24 | **Pin 18** (GPIO 24) | Status-Rückmeldung (Busy) |
+
+---
+
+## Installation & Einrichtung
+
+### Automatische 1-Klick-Installation (Empfohlen)
+```bash
+git clone https://github.com/Jona-Walpert/piclock.git ~/piclock
+cd ~/piclock
+sudo ./install.sh
+```
+
+### Manuelle Installation Schritt für Schritt
+1. **SPI aktivieren:**
+   ```bash
+   sudo raspi-config nonint do_spi 0
+   ```
+2. **Abhängigkeiten installieren:**
+   ```bash
+   sudo apt update
+   sudo apt install -y python3-pil python3-spidev python3-rpi-lgpio fonts-dejavu-core
+   ```
+3. **Repository klonen:**
+   ```bash
+   git clone https://github.com/Jona-Walpert/piclock.git ~/piclock
+   cd ~/piclock
+   ```
+4. **Hardware-Selbsttest ausführen:**
+   ```bash
+   python3 test_clock.py
+   ```
+5. **Autostart-Dienst einrichten:**
+   ```bash
+   sudo cp piclock.service /etc/systemd/system/
+   sudo systemctl daemon-reload
+   sudo systemctl enable --now piclock.service
+   ```
 
 ---
 

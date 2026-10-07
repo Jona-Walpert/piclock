@@ -42,3 +42,4 @@ Wenn die Uhr monatelang mit einer kleinen Batterie betrieben werden soll:
    * Der RTC-Chip schaltet den Strom exakt nach 60 Sekunden für 5 Sekunden wieder an.
 2. **ESP32 / RP2040 Alternative:**
    * Für reine Uhren ohne Linux-Betriebssystem kann ein Mikrocontroller (ESP32) mit Deep Sleep auf unter **15 µA** herabgesetzt werden und läuft mit einer 18650-Zelle über ein Jahr.
+

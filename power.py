@@ -120,3 +120,4 @@ class PowerManager:
             self.set_cpu_powersave_governor()
 
         logger.info("Power optimizations applied successfully")
+
